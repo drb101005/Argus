@@ -1,20 +1,27 @@
 import cv2
 
-cap = cv2.VideoCapture(0)
+from app.camera.frame_grabber import FrameGrabber
 
-if not cap.isOpened():
-    raise RuntimeError("Could not open webcam.")
 
-while True:
-    ret, frame = cap.read()
+def main():
 
-    if not ret:
-        break
+    camera = FrameGrabber()
 
-    cv2.imshow("Sentinel", frame)
+    while True:
 
-    if cv2.waitKey(1) & 0xFF == ord("q"):
-        break
+        ret, frame = camera.read()
 
-cap.release()
-cv2.destroyAllWindows()
+        if not ret:
+            break
+
+        cv2.imshow("ARGUS", frame)
+
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+
+    camera.release()
+    cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    main()

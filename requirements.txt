@@ -1,1 +1,4 @@
-pip install opencv-python numpy
+opencv-python 
+numpy
+insightface 
+    onnxruntime
