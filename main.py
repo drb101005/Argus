@@ -1,11 +1,13 @@
 import cv2
 
 from app.camera.frame_grabber import FrameGrabber
+from app.detector.detector import FaceDetector
 
 
 def main():
 
     camera = FrameGrabber()
+    detector = FaceDetector()
 
     while True:
 
@@ -14,9 +16,23 @@ def main():
         if not ret:
             break
 
+        faces = detector.detect(frame)
+
+        for face in faces:
+
+            x1, y1, x2, y2 = map(int, face.bbox)
+
+            cv2.rectangle(
+                frame,
+                (x1, y1),
+                (x2, y2),
+                (0, 255, 0),
+                2,
+            )
+
         cv2.imshow("ARGUS", frame)
 
-        if cv2.waitKey(1) & 0xFF == ord("q"):
+        if cv2.waitKey(1) == ord("q"):
             break
 
     camera.release()
