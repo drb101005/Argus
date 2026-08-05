@@ -7,7 +7,9 @@ class FaceDetector:
 
         self.app = FaceAnalysis(
             name="buffalo_l",
-            providers=["CPUExecutionProvider"]
+            providers=[
+                "CUDAExecutionProvider",
+                "CPUExecutionProvider"]
         )
 
         self.app.prepare(
