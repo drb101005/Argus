@@ -1,30 +1,21 @@
-from __future__ import annotations
-
 import numpy as np
 
 
 def cosine_similarity(
-    a: np.ndarray,
-    b: np.ndarray,
+    embedding1: np.ndarray,
+    embedding2: np.ndarray,
 ) -> float:
-    """
-    Calculate cosine similarity between two embeddings.
 
-    Args:
-        a: First embedding.
-        b: Second embedding.
+    embedding1 = np.asarray(embedding1, dtype=np.float32)
+    embedding2 = np.asarray(embedding2, dtype=np.float32)
 
-    Returns:
-        Cosine similarity score.
-    """
+    norm1 = np.linalg.norm(embedding1)
+    norm2 = np.linalg.norm(embedding2)
 
-    a = np.asarray(a, dtype=np.float32)
-    b = np.asarray(b, dtype=np.float32)
+    if norm1 == 0 or norm2 == 0:
+        raise ValueError("Cannot calculate cosine similarity for a zero vector")
 
-    a_norm = np.linalg.norm(a)
-    b_norm = np.linalg.norm(b)
-
-    if a_norm == 0 or b_norm == 0:
-        raise ValueError("Cannot compare zero-vector embeddings.")
-
-    return float(np.dot(a, b) / (a_norm * b_norm))
+    return float(
+        np.dot(embedding1, embedding2)
+        / (norm1 * norm2)
+    )
