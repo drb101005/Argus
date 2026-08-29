@@ -1,36 +1,41 @@
 import numpy as np
 
-from app.database.sqlite_db import SQLiteDatabase
 from app.recognizer.recognizer import FaceRecognizer
 
 
-def test_recognizes_matching_embedding(tmp_path):
+class FakeDatabase:
+    def __init__(self, embeddings):
+        self.embeddings = embeddings
 
-    db = SQLiteDatabase(str(tmp_path / "faces.db"))
+    def get_all_embeddings(self):
+        return self.embeddings
 
-    person_id = db.get_or_create_person("Dhruv")
 
-    stored_embedding = np.array(
-        [1.0, 0.0, 0.0],
-        dtype=np.float32,
-    )
+def make_record(name, embedding, image_name="test.jpg"):
+    return {
+        "id": 1,
+        "name": name,
+        "image_name": image_name,
+        "embedding": np.array(embedding, dtype=np.float32),
+    }
 
-    db.add_embedding(
-        person_id,
-        "test.jpg",
-        stored_embedding,
+
+def test_recognizer_finds_best_embedding():
+    database = FakeDatabase(
+        [
+            make_record("Dhruv", [1.0, 0.0], "dhruv1.jpg"),
+            make_record("Dhruv", [0.8, 0.6], "dhruv2.jpg"),
+            make_record("Alice", [0.0, 1.0], "alice1.jpg"),
+        ]
     )
 
     recognizer = FaceRecognizer(
-        db,
-        threshold=0.8,
+        database,
+        threshold=0.45,
     )
 
     result = recognizer.recognize(
-        np.array(
-            [1.0, 0.0, 0.0],
-            dtype=np.float32,
-        )
+        np.array([1.0, 0.0], dtype=np.float32)
     )
 
     assert result["recognized"] is True
@@ -38,32 +43,68 @@ def test_recognizes_matching_embedding(tmp_path):
     assert result["similarity"] == 1.0
 
 
-def test_rejects_unknown_embedding(tmp_path):
-
-    db = SQLiteDatabase(str(tmp_path / "faces.db"))
-
-    person_id = db.get_or_create_person("Dhruv")
-
-    db.add_embedding(
-        person_id,
-        "test.jpg",
-        np.array(
-            [1.0, 0.0, 0.0],
-            dtype=np.float32,
-        ),
+def test_recognizer_selects_best_person():
+    database = FakeDatabase(
+        [
+            make_record("Dhruv", [0.8, 0.6], "dhruv1.jpg"),
+            make_record("Alice", [0.0, 1.0], "alice1.jpg"),
+        ]
     )
 
     recognizer = FaceRecognizer(
-        db,
-        threshold=0.8,
+        database,
+        threshold=0.45,
     )
 
     result = recognizer.recognize(
-        np.array(
-            [0.0, 1.0, 0.0],
-            dtype=np.float32,
-        )
+        np.array([1.0, 0.0], dtype=np.float32)
+    )
+
+    assert result["recognized"] is True
+    assert result["name"] == "Dhruv"
+    assert result["similarity"] > 0.7
+
+
+def test_recognizer_uses_best_embedding_for_same_person():
+    database = FakeDatabase(
+        [
+            make_record("Dhruv", [0.6, 0.8], "dhruv1.jpg"),
+            make_record("Dhruv", [1.0, 0.0], "dhruv2.jpg"),
+            make_record("Alice", [0.0, 1.0], "alice1.jpg"),
+        ]
+    )
+
+    recognizer = FaceRecognizer(
+        database,
+        threshold=0.45,
+    )
+
+    result = recognizer.recognize(
+        np.array([1.0, 0.0], dtype=np.float32)
+    )
+
+    assert result["recognized"] is True
+    assert result["name"] == "Dhruv"
+    assert result["similarity"] == 1.0
+
+
+def test_unknown_face_with_multiple_people():
+    database = FakeDatabase(
+        [
+            make_record("Dhruv", [1.0, 0.0], "dhruv.jpg"),
+            make_record("Alice", [0.0, 1.0], "alice.jpg"),
+        ]
+    )
+
+    recognizer = FaceRecognizer(
+        database,
+        threshold=0.90,
+    )
+
+    result = recognizer.recognize(
+        np.array([1.0, 1.0], dtype=np.float32)
     )
 
     assert result["recognized"] is False
     assert result["name"] is None
+    assert result["similarity"] < 0.90
