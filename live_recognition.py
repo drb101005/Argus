@@ -4,6 +4,7 @@ from app.camera.frame_grabber import FrameGrabber
 from app.detector.detector import FaceDetector
 from app.database.sqlite_db import SQLiteDatabase
 from app.recognizer.recognizer import FaceRecognizer
+from app.recognizer.temporal import TemporalRecognizer
 
 
 def main():
@@ -23,6 +24,11 @@ def main():
         threshold=0.45,
     )
 
+    temporal = TemporalRecognizer(
+        window_size=5,
+        min_votes=3,
+    )
+
     print("ARGUS started.")
     print("Press 'q' to quit.")
 
@@ -38,11 +44,17 @@ def main():
             print("Failed to read frame.")
             break
 
+        # -----------------------------
         # Detect faces
+        # -----------------------------
+
         faces = detector.detect(frame)
 
+        # -----------------------------
         # Process every detected face
-        for face in faces:
+        # -----------------------------
+
+        for track_id, face in enumerate(faces):
 
             # Face bounding box
             x1, y1, x2, y2 = face.bbox.astype(int)
@@ -50,8 +62,20 @@ def main():
             # Face embedding
             embedding = face.embedding
 
-            # Recognize the face
+            # -----------------------------
+            # Normal recognition
+            # -----------------------------
+
             result = recognizer.recognize(embedding)
+
+            # -----------------------------
+            # Temporal recognition
+            # -----------------------------
+
+            result = temporal.update(
+                track_id,
+                result,
+            )
 
             # -----------------------------
             # Determine display information
@@ -94,10 +118,19 @@ def main():
                 2,
             )
 
+        # -----------------------------
         # Show camera
-        cv2.imshow("ARGUS - Face Recognition", frame)
+        # -----------------------------
 
+        cv2.imshow(
+            "ARGUS - Face Recognition",
+            frame,
+        )
+
+        # -----------------------------
         # Quit
+        # -----------------------------
+
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
